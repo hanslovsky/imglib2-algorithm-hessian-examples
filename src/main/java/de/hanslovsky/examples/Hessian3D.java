@@ -1,4 +1,4 @@
-package saalfeldlab.vis;
+package de.hanslovsky.examples;
 
 import bdv.util.BdvFunctions;
 import bdv.util.BdvHandle;

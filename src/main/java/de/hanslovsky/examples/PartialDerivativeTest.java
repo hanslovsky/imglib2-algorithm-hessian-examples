@@ -1,4 +1,4 @@
-package saalfeldlab.vis;
+package de.hanslovsky.examples;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;

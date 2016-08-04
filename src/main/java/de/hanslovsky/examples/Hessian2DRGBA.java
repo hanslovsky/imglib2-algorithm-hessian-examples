@@ -1,4 +1,4 @@
-package saalfeldlab.vis;
+package de.hanslovsky.examples;
 
 import ij.ImageJ;
 import ij.ImagePlus;
