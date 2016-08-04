@@ -28,9 +28,9 @@ public class Hessian2D
 
 		final ImageJ ij = new ImageJ();
 
-		final String dir = "/home/hanslovskyp/local/tmp/hessian-test";
-//		final String url = "http://img.autobytel.com/car-reviews/autobytel/11694-good-looking-sports-cars/2016-Ford-Mustang-GT-burnout-red-tire-smoke.jpg";
-		final String url = String.format( "file://%s/zero-one-range.tif", dir );
+//		final String dir = "/home/hanslovskyp/local/tmp/hessian-test";
+		final String url = "http://img.autobytel.com/car-reviews/autobytel/11694-good-looking-sports-cars/2016-Ford-Mustang-GT-burnout-red-tire-smoke.jpg";
+//		final String url = String.format( "file://%s/zero-one-range.tif", dir );
 
 		final ImagePlus imp = new ImagePlus( url );
 		new ImageConverter( imp ).convertToGray32();
