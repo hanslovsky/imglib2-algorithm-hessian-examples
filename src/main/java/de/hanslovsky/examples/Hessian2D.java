@@ -38,21 +38,28 @@ public class Hessian2D
 
 		final Img< FloatType > wrapped = ImageJFunctions.wrapFloat( imp );
 
-		final double scale = 2.0;
+		final double sigma = 2.0;
+//		final ArrayImg< FloatType, FloatArray > filtered = ArrayImgs.floats( imp.getWidth(), imp.getHeight() );
+
+		// gaussian already different from scipy.ndimage gaussian result
+//		Gauss3.gauss( sigma, Views.extendBorder( wrapped ), filtered );
+
+//		new FileSaver( ImageJFunctions.wrap( filtered, "" ) ).saveAsTiff( dir + "/g.tif" );
 
 		final int nThreads = Runtime.getRuntime().availableProcessors();
 		final ExecutorService es = Executors.newFixedThreadPool( nThreads );
+
 		final Img< DoubleType > hessian = HessianMatrix.calculateMatrix(
 				Views.extendBorder( wrapped ),
 				wrapped,
-				scale,
+				sigma,
 				new OutOfBoundsBorderFactory<>(),
 				new ArrayImgFactory<>(),
 				new DoubleType(),
 				nThreads,
 				es );
 
-		final int N = 10;
+		final int N = 100;
 		long tHessian = 0;
 		for ( int i = 0; i < N; ++i )
 		{
@@ -60,7 +67,7 @@ public class Hessian2D
 			HessianMatrix.calculateMatrix(
 					Views.extendBorder( wrapped ),
 					wrapped,
-					scale,
+					sigma,
 					new OutOfBoundsBorderFactory<>(),
 					new ArrayImgFactory<>(),
 					new DoubleType(),
