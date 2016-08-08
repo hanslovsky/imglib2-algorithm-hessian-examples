@@ -1,5 +1,8 @@
 package de.hanslovsky.examples;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import bdv.util.BdvFunctions;
 import bdv.util.BdvHandle;
 import bdv.util.BdvStackSource;
@@ -13,7 +16,11 @@ import net.imglib2.algorithm.corner.TensorEigenValues;
 import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
 import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.img.Img;
+import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.img.array.ArrayRandomAccess;
+import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.outofbounds.OutOfBoundsBorderFactory;
 import net.imglib2.type.numeric.real.DoubleType;
@@ -27,7 +34,7 @@ public class Hessian3D
 	{
 
 //		final String url = "http://img.autobytel.com/car-reviews/autobytel/11694-good-looking-sports-cars/2016-Ford-Mustang-GT-burnout-red-tire-smoke.jpg";
-		final String dir = "/data/hanslovskyp/davi_toy_set/substacks/scale=0.3/data";
+		final String dir = "/data/hanslovskyp/davi_toy_set/substacks/scale=1.0/data";
 
 		final ImagePlus imp = new FolderOpener().openFolder( dir );
 		new ImageConverter( imp ).convertToGray32();
@@ -35,13 +42,18 @@ public class Hessian3D
 		final double min = imp.getDisplayRangeMin();
 		final double max = imp.getDisplayRangeMax();
 
-		final IntervalView< FloatType > wrapped = Views.interval( ImageJFunctions.wrapFloat( imp ), new FinalInterval( imp.getWidth(), imp.getHeight(), 10 ) );
+		final IntervalView< FloatType > wrapped = Views.interval( ImageJFunctions.wrapFloat( imp ), new FinalInterval( imp.getWidth(), imp.getHeight(), imp.getStackSize() / 10 ) );
 
 		final BdvStackSource< FloatType > raw = BdvFunctions.show( wrapped, "raw" );
 		final BdvHandle bdv = raw.getBdvHandle();
 		raw.setDisplayRange( min, max );
 
-		final double[] sigma = new double[] { 1.0, 1.0, 0.1 };
+		//
+		final double sig = 2.0;
+		final double[] sigma = new double[] { 1.0 * sig, 1.0 * sig, 0.1 * sig };
+
+		final int nThreads = Runtime.getRuntime().availableProcessors();
+		final ExecutorService es = Executors.newFixedThreadPool( nThreads );
 
 		final Img< DoubleType > hessian =
 				HessianMatrix.calculateMatrix(
@@ -50,10 +62,14 @@ public class Hessian3D
 						sigma,
 						new OutOfBoundsBorderFactory<>(),
 						new ArrayImgFactory< DoubleType >(),
-						new DoubleType() );
+						new DoubleType(),
+						nThreads,
+						es );
 
 
-		final Img< DoubleType > evs = TensorEigenValues.calculateEigenValuesSymmetric( hessian, new ArrayImgFactory<>(), new DoubleType() );
+		final Img< DoubleType > evs = TensorEigenValues.calculateEigenValuesSymmetric( hessian, new ArrayImgFactory<>(), new DoubleType(), nThreads, es );
+
+		es.shutdown();
 
 		new ImageJ();
 		for ( int d = 0; d < evs.dimension( evs.numDimensions() - 1 ); ++d )
@@ -81,6 +97,21 @@ public class Hessian3D
 			ImageJFunctions.show( hs );
 
 		}
+
+		final ArrayImg< DoubleType, DoubleArray > square = ArrayImgs.doubles( 5, 5, 5 );
+		final ArrayRandomAccess< DoubleType > ra = square.randomAccess();
+		ra.setPosition( new long[] { 2, 2, 2 } );
+		ra.get().set( 4 );
+
+		final Img< DoubleType > hs = HessianMatrix.calculateMatrix(
+				Views.extendBorder( square ),
+				square,
+				0.01,
+				new OutOfBoundsBorderFactory<>(),
+				new ArrayImgFactory< DoubleType >(),
+				new DoubleType() );
+		final Img< DoubleType > evs2 = TensorEigenValues.calculateEigenValuesSymmetric( hs, new ArrayImgFactory< DoubleType >(), new DoubleType() );
+		ImageJFunctions.show( evs2 );
 
 	}
 }
