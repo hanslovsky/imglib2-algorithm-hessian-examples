@@ -8,9 +8,8 @@ import ij.ImageJ;
 import ij.ImagePlus;
 import ij.process.ImageConverter;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.algorithm.corner.HessianMatrix;
-import net.imglib2.algorithm.corner.TensorEigenValues;
-import net.imglib2.algorithm.gauss3.Gauss3;
+import net.imglib2.algorithm.gradient.HessianMatrix;
+import net.imglib2.algorithm.linalg.eigen.TensorEigenValues;
 import net.imglib2.converter.Converters;
 import net.imglib2.converter.RealDoubleConverter;
 import net.imglib2.exception.IncompatibleTypeException;
@@ -59,14 +58,7 @@ public class Hessian2D
 		{
 			final ArrayImg< DoubleType, DoubleArray > gaussian = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( wrapped ) );
 			final ArrayImg< DoubleType, DoubleArray > gradients = ArrayImgs.doubles( imp.getWidth(), imp.getHeight(), 2 );
-			Gauss3.gauss( sigma, Views.extendBorder( wrapped ), gaussian );
-			HessianMatrix.calculateMatrix(
-					Views.extendBorder( gaussian ),
-					gradients,
-					hessian,
-					new OutOfBoundsBorderFactory<>(),
-					nThreads,
-					es );
+			HessianMatrix.calculateMatrix( Views.extendBorder( wrapped ), gaussian, gradients, hessian, new OutOfBoundsBorderFactory<>(), nThreads, es, sigma );
 		}
 
 		final int N = 100;
@@ -76,14 +68,7 @@ public class Hessian2D
 			final ArrayImg< DoubleType, DoubleArray > gaussian = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( wrapped ) );
 			final ArrayImg< DoubleType, DoubleArray > gradients = ArrayImgs.doubles( imp.getWidth(), imp.getHeight(), 2 );
 			final long t0 = System.currentTimeMillis();
-			Gauss3.gauss( sigma, Views.extendBorder( wrapped ), gaussian );
-			HessianMatrix.calculateMatrix(
-					Views.extendBorder( gaussian ),
-					gradients,
-					hessian,
-					new OutOfBoundsBorderFactory<>(),
-					nThreads,
-					es );
+			HessianMatrix.calculateMatrix( Views.extendBorder( wrapped ), gaussian, gradients, hessian, new OutOfBoundsBorderFactory<>(), nThreads, es, sigma );
 			final long t1 = System.currentTimeMillis();
 			tHessian += t1 - t0;
 		}

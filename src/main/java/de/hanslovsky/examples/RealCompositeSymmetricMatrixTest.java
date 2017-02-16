@@ -4,7 +4,7 @@ import java.util.Random;
 
 import org.apache.commons.math3.linear.RealMatrix;
 
-import net.imglib2.algorithm.corner.matrix.RealCompositeSymmetricMatrix;
+import net.imglib2.algorithm.linalg.matrix.RealCompositeSymmetricMatrix;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.DoubleArray;
