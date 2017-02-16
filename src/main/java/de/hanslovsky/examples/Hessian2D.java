@@ -1,29 +1,34 @@
 package de.hanslovsky.examples;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.process.ImageConverter;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.corner.HessianMatrix;
 import net.imglib2.algorithm.corner.TensorEigenValues;
+import net.imglib2.algorithm.gauss3.Gauss3;
+import net.imglib2.converter.Converters;
+import net.imglib2.converter.RealDoubleConverter;
 import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.img.array.ArrayRandomAccess;
 import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.outofbounds.OutOfBoundsBorderFactory;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
 public class Hessian2D
 {
-	public static void main( final String[] args ) throws IncompatibleTypeException
+	public static void main( final String[] args ) throws IncompatibleTypeException, InterruptedException, ExecutionException
 	{
 
 		final ImageJ ij = new ImageJ();
@@ -36,7 +41,7 @@ public class Hessian2D
 		new ImageConverter( imp ).convertToGray32();
 		imp.show();
 
-		final Img< FloatType > wrapped = ImageJFunctions.wrapFloat( imp );
+		final RandomAccessibleInterval< DoubleType > wrapped = Converters.convert( ( RandomAccessibleInterval< FloatType > ) ImageJFunctions.wrapFloat( imp ), new RealDoubleConverter<>(), new DoubleType() );
 
 		final double sigma = 2.0;
 //		final ArrayImg< FloatType, FloatArray > filtered = ArrayImgs.floats( imp.getWidth(), imp.getHeight() );
@@ -49,28 +54,34 @@ public class Hessian2D
 		final int nThreads = Runtime.getRuntime().availableProcessors();
 		final ExecutorService es = Executors.newFixedThreadPool( nThreads );
 
-		final Img< DoubleType > hessian = HessianMatrix.calculateMatrix(
-				Views.extendBorder( wrapped ),
-				wrapped,
-				sigma,
-				new OutOfBoundsBorderFactory<>(),
-				new ArrayImgFactory<>(),
-				new DoubleType(),
-				nThreads,
-				es );
+		final ArrayImg< DoubleType, DoubleArray > hessian = ArrayImgs.doubles( imp.getWidth(), imp.getHeight(), 3 );
+
+		{
+			final ArrayImg< DoubleType, DoubleArray > gaussian = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( wrapped ) );
+			final ArrayImg< DoubleType, DoubleArray > gradients = ArrayImgs.doubles( imp.getWidth(), imp.getHeight(), 2 );
+			Gauss3.gauss( sigma, Views.extendBorder( wrapped ), gaussian );
+			HessianMatrix.calculateMatrix(
+					Views.extendBorder( gaussian ),
+					gradients,
+					hessian,
+					new OutOfBoundsBorderFactory<>(),
+					nThreads,
+					es );
+		}
 
 		final int N = 100;
 		long tHessian = 0;
 		for ( int i = 0; i < N; ++i )
 		{
+			final ArrayImg< DoubleType, DoubleArray > gaussian = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( wrapped ) );
+			final ArrayImg< DoubleType, DoubleArray > gradients = ArrayImgs.doubles( imp.getWidth(), imp.getHeight(), 2 );
 			final long t0 = System.currentTimeMillis();
+			Gauss3.gauss( sigma, Views.extendBorder( wrapped ), gaussian );
 			HessianMatrix.calculateMatrix(
-					Views.extendBorder( wrapped ),
-					wrapped,
-					sigma,
+					Views.extendBorder( gaussian ),
+					gradients,
+					hessian,
 					new OutOfBoundsBorderFactory<>(),
-					new ArrayImgFactory<>(),
-					new DoubleType(),
 					nThreads,
 					es );
 			final long t1 = System.currentTimeMillis();
@@ -80,13 +91,15 @@ public class Hessian2D
 		final double tHessianDouble = tHessian / 1000.0 / N;
 		System.out.println( "tHessian=" + tHessianDouble + "s" );
 
-		final Img< DoubleType > evs = TensorEigenValues.calculateEigenValuesSymmetric( hessian, new ArrayImgFactory< DoubleType >(), new DoubleType(), nThreads, es );
+		final Img< DoubleType > evs = TensorEigenValues.createAppropriateResultImg( hessian, new ArrayImgFactory<>(), new DoubleType() );
+
+		TensorEigenValues.calculateEigenValuesSymmetric( hessian, evs, nThreads, es );
 
 		long tEigenvals = 0;
 		for ( int i = 0; i < N; ++i )
 		{
 			final long t0 = System.currentTimeMillis();
-			TensorEigenValues.calculateEigenValuesSymmetric( hessian, new ArrayImgFactory< DoubleType >(), new DoubleType(), nThreads, es );
+			TensorEigenValues.calculateEigenValuesSymmetric( hessian, evs, nThreads, es );
 			final long t1 = System.currentTimeMillis();
 			tEigenvals += t1 - t0;
 		}
@@ -103,21 +116,6 @@ public class Hessian2D
 
 		ImageJFunctions.show( hessian );
 		ImageJFunctions.show( evs );
-//
-		final ArrayImg< DoubleType, DoubleArray > square = ArrayImgs.doubles( 5, 5 );
-		final ArrayRandomAccess< DoubleType > ra = square.randomAccess();
-		ra.setPosition( new long[] { 2, 2 } );
-		ra.get().set( 4 );
-
-		final Img< DoubleType > hs = HessianMatrix.calculateMatrix(
-				Views.extendBorder( square ),
-				square,
-				0.1,
-				new OutOfBoundsBorderFactory<>(),
-				new ArrayImgFactory< DoubleType >(),
-				new DoubleType() );
-		final Img< DoubleType > evs2 = TensorEigenValues.calculateEigenValuesSymmetric( hs, new ArrayImgFactory< DoubleType >(), new DoubleType() );
-		ImageJFunctions.show( evs2 );
 
 	}
 }

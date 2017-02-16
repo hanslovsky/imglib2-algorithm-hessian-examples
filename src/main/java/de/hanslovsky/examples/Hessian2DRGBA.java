@@ -5,6 +5,7 @@ import ij.ImagePlus;
 import net.imglib2.Cursor;
 import net.imglib2.algorithm.corner.HessianMatrix;
 import net.imglib2.algorithm.corner.TensorEigenValues;
+import net.imglib2.algorithm.gauss3.Gauss3;
 import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImg;
@@ -14,6 +15,7 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.outofbounds.OutOfBoundsBorderFactory;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.RealComposite;
 
@@ -34,9 +36,7 @@ public class Hessian2DRGBA
 
 		final long[] dim = new long[ wrapped.numDimensions() + 1 ];
 		for ( int d = 0; d < wrapped.numDimensions(); ++d )
-		{
 			dim[ d ] = wrapped.dimension( d );
-		}
 		dim[ dim.length - 1 ] = 3;
 
 		final ArrayImg< DoubleType, DoubleArray > wrappedRGB = ArrayImgs.doubles( dim );
@@ -67,12 +67,14 @@ public class Hessian2DRGBA
 
 		for ( int i = 0; i < 3; ++i )
 		{
+
+			final IntervalView< DoubleType > hs = Views.hyperSlice( wrappedRGB, 2, i );
+			Gauss3.gauss( sigma, Views.extendBorder( hs ), Views.hyperSlice( gaussians, 2, i ) );
+
 			HessianMatrix.calculateMatrix(
-					Views.extendBorder( Views.hyperSlice( wrappedRGB, 2, i ) ),
-					Views.hyperSlice( gaussians, 2, i ),
+					Views.extendBorder( Views.hyperSlice( gaussians, 2, i ) ),
 					Views.hyperSlice( gradients, 3, i ),
 					Views.hyperSlice( hessians, 3, i ),
-					sigma,
 					new OutOfBoundsBorderFactory<>()
 					);
 			System.out.println( "Done with hessian" );

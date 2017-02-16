@@ -4,7 +4,7 @@ import java.util.Random;
 
 import org.apache.commons.math3.linear.RealMatrix;
 
-import net.imglib2.algorithm.corner.RealCompositeSymmetricMatrix;
+import net.imglib2.algorithm.corner.matrix.RealCompositeSymmetricMatrix;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.DoubleArray;
@@ -34,12 +34,10 @@ public class RealCompositeSymmetricMatrixTest
 		System.out.println( newMat );
 		final Random rng = new Random( 100 );
 		for ( int r = 0; r < newMat.getRowDimension(); ++r )
-		{
 			for ( int c = r; c < newMat.getColumnDimension(); ++c )
 			{
 				newMat.setEntry( r, c, rng.nextInt( 10000 ) );
 				System.out.println( newMat );
 			}
-		}
 	}
 }
