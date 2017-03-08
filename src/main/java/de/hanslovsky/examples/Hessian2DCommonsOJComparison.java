@@ -9,8 +9,6 @@ import ij.ImagePlus;
 import ij.process.ImageConverter;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.gradient.HessianMatrix;
-import net.imglib2.algorithm.linalg.eigen.EigenValuesSymmetric;
-import net.imglib2.algorithm.linalg.eigen.EigenValuesSymmetricOJ;
 import net.imglib2.algorithm.linalg.eigen.TensorEigenValues;
 import net.imglib2.converter.Converters;
 import net.imglib2.converter.RealDoubleConverter;
@@ -27,7 +25,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
-public class Hessian2D
+public class Hessian2DCommonsOJComparison
 {
 	public static void main( final String[] args ) throws IncompatibleTypeException, InterruptedException, ExecutionException
 	{
@@ -45,6 +43,12 @@ public class Hessian2D
 		final RandomAccessibleInterval< DoubleType > wrapped = Converters.convert( ( RandomAccessibleInterval< FloatType > ) ImageJFunctions.wrapFloat( imp ), new RealDoubleConverter<>(), new DoubleType() );
 
 		final double sigma = 2.0;
+//		final ArrayImg< FloatType, FloatArray > filtered = ArrayImgs.floats( imp.getWidth(), imp.getHeight() );
+
+		// gaussian already different from scipy.ndimage gaussian result
+//		Gauss3.gauss( sigma, Views.extendBorder( wrapped ), filtered );
+
+//		new FileSaver( ImageJFunctions.wrap( filtered, "" ) ).saveAsTiff( dir + "/g.tif" );
 
 		final int nThreads = Runtime.getRuntime().availableProcessors();
 		final ExecutorService es = Executors.newFixedThreadPool( nThreads );
@@ -58,45 +62,45 @@ public class Hessian2D
 		}
 
 		final int N = 100;
-		final int nWarmup = 100;
-		final int nTotal = N + nWarmup;
-
-		final Img< DoubleType > evs1 = TensorEigenValues.createAppropriateResultImg( hessian, new ArrayImgFactory<>(), new DoubleType() );
-		final Img< DoubleType > evs2 = TensorEigenValues.createAppropriateResultImg( hessian, new ArrayImgFactory<>(), new DoubleType() );
-
+		long tHessian = 0;
+		for ( int i = 0; i < N; ++i )
 		{
-			long tEigenvals = 0;
-			for ( int i = 0; i < nTotal; ++i )
-			{
-				final long t0 = System.currentTimeMillis();
-				TensorEigenValues.calculateEigenValues( hessian, evs1, new EigenValuesSymmetric<>( 2 ), nThreads, es );
-				final long t1 = System.currentTimeMillis();
-				if ( i > nWarmup )
-					tEigenvals += t1 - t0;
-			}
-			final double tEigenvalsDouble = tEigenvals / 1000.0 / N;
-			System.out.println( "tEigenvals=" + tEigenvalsDouble + "s" );
+			final ArrayImg< DoubleType, DoubleArray > gaussian = ArrayImgs.doubles( Intervals.dimensionsAsLongArray( wrapped ) );
+			final ArrayImg< DoubleType, DoubleArray > gradients = ArrayImgs.doubles( imp.getWidth(), imp.getHeight(), 2 );
+			final long t0 = System.currentTimeMillis();
+			HessianMatrix.calculateMatrix( Views.extendBorder( wrapped ), gaussian, gradients, hessian, new OutOfBoundsBorderFactory<>(), nThreads, es, sigma );
+			final long t1 = System.currentTimeMillis();
+			tHessian += t1 - t0;
 		}
 
-		{
-			long tEigenvals = 0;
-			for ( int i = 0; i < nTotal; ++i )
-			{
-				final long t0 = System.currentTimeMillis();
-				TensorEigenValues.calculateEigenValues( hessian, evs2, new EigenValuesSymmetricOJ<>( 2 ), nThreads, es );
-				final long t1 = System.currentTimeMillis();
-				if ( i > nWarmup )
-					tEigenvals += t1 - t0;
-			}
-			final double tEigenvalsDouble = tEigenvals / 1000.0 / N;
-			System.out.println( "tEigenvals(oj)=" + tEigenvalsDouble + "s" );
-		}
+		final double tHessianDouble = tHessian / 1000.0 / N;
+		System.out.println( "tHessian=" + tHessianDouble + "s" );
 
+		final Img< DoubleType > evs = TensorEigenValues.createAppropriateResultImg( hessian, new ArrayImgFactory<>(), new DoubleType() );
+
+		TensorEigenValues.calculateEigenValuesSymmetric( hessian, evs, nThreads, es );
+
+		long tEigenvals = 0;
+		for ( int i = 0; i < N; ++i )
+		{
+			final long t0 = System.currentTimeMillis();
+			TensorEigenValues.calculateEigenValuesSymmetric( hessian, evs, nThreads, es );
+			final long t1 = System.currentTimeMillis();
+			tEigenvals += t1 - t0;
+		}
+		final double tEigenvalsDouble = tEigenvals / 1000.0 / N;
+		System.out.println( "tEigenvals=" + tEigenvalsDouble + "s" );
 		es.shutdown();
 
+//		new FileSaver( ImageJFunctions.wrap( Views.hyperSlice( hessian, 2, 0 ), "" ) ).saveAsTiff( dir + "/h-1.tif" );
+//		new FileSaver( ImageJFunctions.wrap( Views.hyperSlice( hessian, 2, 1 ), "" ) ).saveAsTiff( dir + "/h-2.tif" );
+//		new FileSaver( ImageJFunctions.wrap( Views.hyperSlice( hessian, 2, 2 ), "" ) ).saveAsTiff( dir + "/h-3.tif" );
+//
+//		new FileSaver( ImageJFunctions.wrap( Views.hyperSlice( evs, 2, 0 ), "" ) ).saveAsTiff( dir + "/e-1.tif" );
+//		new FileSaver( ImageJFunctions.wrap( Views.hyperSlice( evs, 2, 1 ), "" ) ).saveAsTiff( dir + "/e-2.tif" );
+
 		ImageJFunctions.show( hessian );
-		ImageJFunctions.show( evs1 );
-		ImageJFunctions.show( evs2 );
+		ImageJFunctions.show( evs );
 
 	}
 }
