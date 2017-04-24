@@ -9,8 +9,8 @@ import ij.ImagePlus;
 import ij.process.ImageConverter;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.gradient.HessianMatrix;
+import net.imglib2.algorithm.linalg.eigen.EigenValues2DSymmetric;
 import net.imglib2.algorithm.linalg.eigen.EigenValuesSymmetric;
-import net.imglib2.algorithm.linalg.eigen.EigenValuesSymmetricOJ;
 import net.imglib2.algorithm.linalg.eigen.TensorEigenValues;
 import net.imglib2.converter.Converters;
 import net.imglib2.converter.RealDoubleConverter;
@@ -69,7 +69,7 @@ public class Hessian2D
 			for ( int i = 0; i < nTotal; ++i )
 			{
 				final long t0 = System.currentTimeMillis();
-				TensorEigenValues.calculateEigenValues( hessian, evs1, new EigenValuesSymmetric<>( 2 ), nThreads, es );
+				TensorEigenValues.calculateEigenValues( hessian, evs1, new EigenValues2DSymmetric<>(), nThreads, es );
 				final long t1 = System.currentTimeMillis();
 				if ( i > nWarmup )
 					tEigenvals += t1 - t0;
@@ -83,7 +83,7 @@ public class Hessian2D
 			for ( int i = 0; i < nTotal; ++i )
 			{
 				final long t0 = System.currentTimeMillis();
-				TensorEigenValues.calculateEigenValues( hessian, evs2, new EigenValuesSymmetricOJ<>( 2 ), nThreads, es );
+				TensorEigenValues.calculateEigenValues( hessian, evs2, new EigenValuesSymmetric<>( 2 ), nThreads, es );
 				final long t1 = System.currentTimeMillis();
 				if ( i > nWarmup )
 					tEigenvals += t1 - t0;

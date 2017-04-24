@@ -16,7 +16,6 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.gauss3.Gauss3;
 import net.imglib2.algorithm.gradient.HessianMatrix;
 import net.imglib2.algorithm.linalg.eigen.EigenValuesSymmetric;
-import net.imglib2.algorithm.linalg.eigen.EigenValuesSymmetricOJ;
 import net.imglib2.algorithm.linalg.eigen.TensorEigenValues;
 import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
 import net.imglib2.exception.IncompatibleTypeException;
@@ -82,15 +81,15 @@ public class Hessian3DCommonsOJComparison
 			final long t0 = System.currentTimeMillis();
 			TensorEigenValues.calculateEigenValues( hessian, evs1, new EigenValuesSymmetric<>( 3 ), nThreads, es );
 			final long t1 = System.currentTimeMillis();
-			System.out.println( "commons time: " + ( t1 - t0 ) / 1000.0 + "ms" );
+			System.out.println( "symmetric time: " + ( t1 - t0 ) / 1000.0 + "ms" );
 		}
 		{
-			final long t0 = System.currentTimeMillis();
-			TensorEigenValues.calculateEigenValues( hessian, evs1, new EigenValuesSymmetricOJ<>( 3 ), nThreads, es );
-			final long t1 = System.currentTimeMillis();
-			System.out.println( "oj time: " + ( t1 - t0 ) / 1000.0 + "ms" );
+//			final long t0 = System.currentTimeMillis();
+//			TensorEigenValues.calculateEigenValues( hessian, evs2, new EigenValuesSquare<>( 3 ), nThreads, es );
+//			final long t1 = System.currentTimeMillis();
+//			System.out.println( "square time: " + ( t1 - t0 ) / 1000.0 + "ms" );
 		}
-		final Img< DoubleType > evs = evs2;
+		final Img< DoubleType > evs = evs1;
 
 		es.shutdown();
 
